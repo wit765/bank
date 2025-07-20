@@ -1,0 +1,40 @@
+No files changed, compilation skipped
+
+Ran 7 tests for test/Bank.t.sol:BankTest
+[PASS] testDepositUpdatesBalance() (gas: 78372)
+[FAIL: EvmError: Revert] testOnlyAdminCanWithdraw() (gas: 91316)
+Traces:
+  [91316] BankTest::testOnlyAdminCanWithdraw()
+    ├─ [0] VM::deal(BankTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], 10000000000000000000 [1e19])
+    │   └─ ← [Return]
+    ├─ [55546] Bank::deposit{value: 10000000000000000000}()
+    │   ├─ emit Deposited(user: BankTest: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496], amount: 10000000000000000000 [1e19])
+    │   └─ ← [Stop]
+    ├─ [0] VM::deal(0x7E5F4552091A69125d5DfCb7b8C2659029395Bdf, 1000000000000000000 [1e18])
+    │   └─ ← [Return]
+    ├─ [0] VM::prank(0x7E5F4552091A69125d5DfCb7b8C2659029395Bdf)
+    │   └─ ← [Return]
+    ├─ [0] VM::expectRevert(custom error 0xf28dceb3:  Only admin can withdraw)
+    │   └─ ← [Return]
+    ├─ [2851] Bank::withdraw(1000000000000000000 [1e18])
+    │   └─ ← [Revert] Only admin can withdraw
+    ├─ [9676] Bank::withdraw(5000000000000000000 [5e18])
+    │   ├─ [43] BankTest::fallback{value: 5000000000000000000}()
+    │   │   └─ ← [Revert] EvmError: Revert
+    │   └─ ← [Revert] EvmError: Revert
+    └─ ← [Revert] EvmError: Revert
+
+[PASS] testTopDepositors_1User() (gas: 81279)
+[PASS] testTopDepositors_2Users() (gas: 139736)
+[PASS] testTopDepositors_3Users() (gas: 198147)
+[PASS] testTopDepositors_4Users() (gas: 236634)
+[PASS] testTopDepositors_SameUserMultipleDeposits() (gas: 224062)
+Suite result: FAILED. 6 passed; 1 failed; 0 skipped; finished in 1.90ms (1.97ms CPU time)
+
+Ran 1 test suite in 10.19ms (1.90ms CPU time): 6 tests passed, 1 failed, 0 skipped (7 total tests)
+
+Failing tests:
+Encountered 1 failing test in test/Bank.t.sol:BankTest
+[FAIL: EvmError: Revert] testOnlyAdminCanWithdraw() (gas: 91316)
+
+Encountered a total of 1 failing tests, 6 tests succeeded
