@@ -11,9 +11,21 @@ contract Bank {
     // 存款排行榜（前3名）
     address[3] public topDepositors;
     
+    // Approve机制
+    mapping(address => uint256) public approvedAmounts;
+    
+    // 自动化转移阈值（固定为10 ether）
+    uint256 public constant autoTransferThreshold = 10 ether;
+    
+    // 自动化合约地址
+    address public automationContract;
+    
     // 事件
     event Deposited(address indexed user, uint256 amount);
     event Withdrawn(address indexed admin, uint256 amount);
+    event Approved(address indexed user, uint256 amount);
+    event AutoTransfer(address indexed user, uint256 amount);
+    event AutomationContractSet(address indexed automationContract);
     
     // 构造函数，设置管理员
     constructor() {
@@ -22,12 +34,31 @@ contract Bank {
     
     // 接收ETH的fallback函数（支持Metamask直接转账）
     receive() external payable {
+        // 直接转账时也需要approve
+        require(approvedAmounts[msg.sender] >= msg.value, "Amount not approved");
         deposit();
     }
     
-    // 存款函数（也可通过直接转账触发）
+    // 设置自动化合约地址（仅管理员）
+    function setAutomationContract(address _automationContract) external {
+        require(msg.sender == admin, "Only admin can set automation contract");
+        automationContract = _automationContract;
+        emit AutomationContractSet(_automationContract);
+    }
+    
+    // Approve函数 - 用户需要先approve才能存款
+    function approve(uint256 amount) external {
+        approvedAmounts[msg.sender] = amount;
+        emit Approved(msg.sender, amount);
+    }
+    
+    // 存款函数（需要先approve）
     function deposit() public payable {
         require(msg.value > 0, "Deposit amount must be greater than 0");
+        require(approvedAmounts[msg.sender] >= msg.value, "Amount not approved");
+        
+        // 减少approved金额
+        approvedAmounts[msg.sender] -= msg.value;
         
         // 更新用户余额
         balances[msg.sender] += msg.value;
@@ -38,6 +69,23 @@ contract Bank {
         emit Deposited(msg.sender, msg.value);
     }
     
+    // 自动化转移函数（仅自动化合约可调用）
+    function executeAutoTransfer(address user) external {
+        require(msg.sender == automationContract, "Only automation contract can call");
+        require(balances[user] >= autoTransferThreshold, "Balance below threshold");
+        
+        uint256 transferAmount = balances[user] / 2;
+        balances[user] -= transferAmount;
+        
+        // 转移给owner
+        payable(admin).transfer(transferAmount);
+        
+        // 重新更新排行榜
+        updateTopDepositors(user, balances[user]);
+        
+        emit AutoTransfer(user, transferAmount);
+    }
+    
     // 仅管理员可调用的提款函数
     function withdraw(uint256 amount) external {
         require(msg.sender == admin, "Only admin can withdraw");
@@ -45,6 +93,12 @@ contract Bank {
         
         payable(admin).transfer(amount);
         emit Withdrawn(admin, amount);
+    }
+    
+    // 检查用户是否需要自动化转移
+    function checkUpkeep(address user) external view returns (bool upkeepNeeded, bytes memory performData) {
+        upkeepNeeded = balances[user] >= autoTransferThreshold;
+        performData = abi.encode(user);
     }
     
     // 更新存款排行榜
@@ -92,5 +146,10 @@ contract Bank {
     // 获取合约总余额
     function getContractBalance() public view returns (uint256) {
         return address(this).balance;
+    }
+    
+    // 获取用户的approved金额
+    function getApprovedAmount(address user) public view returns (uint256) {
+        return approvedAmounts[user];
     }
 }      
